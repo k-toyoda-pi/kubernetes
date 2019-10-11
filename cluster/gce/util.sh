@@ -1728,7 +1728,7 @@ function generate-certs {
       output_file_missing=1
     fi
   done
-  if (( $output_file_missing )); then
+  if (( output_file_missing )); then
     # TODO(roberthbailey,porridge): add better error handling here,
     # see https://github.com/kubernetes/kubernetes/issues/55229
     cat "${cert_create_debug_output}" >&2
@@ -1787,7 +1787,7 @@ function generate-aggregator-certs {
       output_file_missing=1
     fi
   done
-  if (( $output_file_missing )); then
+  if (( output_file_missing )); then
     # TODO(roberthbailey,porridge): add better error handling here,
     # see https://github.com/kubernetes/kubernetes/issues/55229
     cat "${cert_create_debug_output}" >&2
@@ -1873,7 +1873,7 @@ function generate-konnectivity-server-certs {
       output_file_missing=1
     fi
   done
-  if (( $output_file_missing )); then
+  if (( output_file_missing )); then
     # TODO(roberthbailey,porridge): add better error handling here,
     # see https://github.com/kubernetes/kubernetes/issues/55229
     cat "${cert_create_debug_output}" >&2
@@ -2019,9 +2019,9 @@ function create-static-ip() {
       echo -e "${color_red}Failed to create static ip $1 ${color_norm}" >&2
       exit 2
     fi
-    attempt=$(($attempt+1))
+    attempt=$((attempt + 1))
     echo -e "${color_yellow:-}Attempt $attempt failed to create static ip $1. Retrying.${color_norm}" >&2
-    sleep $(($attempt * 5))
+    sleep $((attempt * 5))
   done
 }
 
@@ -2043,9 +2043,9 @@ function create-firewall-rule() {
         echo -e "${color_red}Failed to create firewall rule $1 ${color_norm}" >&2
         exit 2
       fi
-      echo -e "${color_yellow}Attempt $(($attempt+1)) failed to create firewall rule $1. Retrying.${color_norm}" >&2
-      attempt=$(($attempt+1))
-      sleep $(($attempt * 5))
+      echo -e "${color_yellow}Attempt $((attempt + 1)) failed to create firewall rule $1. Retrying.${color_norm}" >&2
+      attempt=$((attempt + 1))
+      sleep $((attempt * 5))
     else
         break
     fi
@@ -2246,8 +2246,8 @@ function create-node-template() {
           exit 2
         fi
         echo -e "${color_yellow}Attempt ${attempt} failed to create instance template ${template_name}. Retrying.${color_norm}" >&2
-        attempt=$(($attempt+1))
-        sleep $(($attempt * 5))
+        attempt=$((attempt + 1))
+        sleep $((attempt * 5))
 
         # In case the previous attempt failed with something like a
         # Backend Error and left the entry laying around, delete it
@@ -3111,8 +3111,8 @@ function set_num_migs() {
     echo "MAX_INSTANCES_PER_MIG cannot be negative. Assuming default 1000"
     defaulted_max_instances_per_mig=1000
   fi
-  export NUM_MIGS=$(((${NUM_NODES} + ${defaulted_max_instances_per_mig} - 1) / ${defaulted_max_instances_per_mig}))
-  export NUM_WINDOWS_MIGS=$(((${NUM_WINDOWS_NODES} + ${defaulted_max_instances_per_mig} - 1) / ${defaulted_max_instances_per_mig}))
+  export NUM_MIGS=$(((NUM_NODES + defaulted_max_instances_per_mig - 1) / defaulted_max_instances_per_mig))
+  export NUM_WINDOWS_MIGS=$(((NUM_WINDOWS_NODES + defaulted_max_instances_per_mig - 1) / defaulted_max_instances_per_mig))
 }
 
 # Assumes:
@@ -3153,13 +3153,13 @@ function create-linux-nodes() {
           --zone "${ZONE}" \
           --project "${PROJECT}" \
           --timeout "${MIG_WAIT_UNTIL_STABLE_TIMEOUT}" || true
-      nodes=$(( nodes - $num_additional ))
+      nodes=$(( nodes - num_additional ))
     fi
   fi
 
   local instances_left=${nodes}
 
-  for ((i=1; i<=${NUM_MIGS}; i++)); do
+  for ((i=1; i<=NUM_MIGS; i++)); do
     local group_name="${NODE_INSTANCE_PREFIX}-group-$i"
     if [[ $i == ${NUM_MIGS} ]]; then
       # TODO: We don't add a suffix for the last group to keep backward compatibility when there's only one MIG.
@@ -3167,8 +3167,8 @@ function create-linux-nodes() {
       group_name="${NODE_INSTANCE_PREFIX}-group"
     fi
     # Spread the remaining number of nodes evenly
-    this_mig_size=$((${instances_left} / (${NUM_MIGS}-${i}+1)))
-    instances_left=$((instances_left-${this_mig_size}))
+    this_mig_size=$((instances_left / (NUM_MIGS - i + 1)))
+    instances_left=$((instances_left - this_mig_size))
 
     # Run instance-groups creation in parallel.
     {
@@ -3201,7 +3201,7 @@ function create-windows-nodes() {
   local -r nodes="${NUM_WINDOWS_NODES}"
   local instances_left=${nodes}
 
-  for ((i=1; i<=${NUM_WINDOWS_MIGS}; i++)); do
+  for ((i=1; i<=NUM_WINDOWS_MIGS; i++)); do
     local group_name="${WINDOWS_NODE_INSTANCE_PREFIX}-group-$i"
     if [[ $i == ${NUM_WINDOWS_MIGS} ]]; then
       # TODO: We don't add a suffix for the last group to keep backward compatibility when there's only one MIG.
@@ -3209,8 +3209,8 @@ function create-windows-nodes() {
       group_name="${WINDOWS_NODE_INSTANCE_PREFIX}-group"
     fi
     # Spread the remaining number of nodes evenly
-    this_mig_size=$((${instances_left} / (${NUM_WINDOWS_MIGS}-${i}+1)))
-    instances_left=$((instances_left-${this_mig_size}))
+    this_mig_size=$((instances_left / (NUM_WINDOWS_MIGS - i + 1)))
+    instances_left=$((instances_left - this_mig_size))
 
     gcloud compute instance-groups managed \
         create "${group_name}" \
@@ -3310,7 +3310,7 @@ function create-cluster-autoscaler-mig-config() {
   local left_min=${AUTOSCALER_MIN_NODES}
   local left_max=${AUTOSCALER_MAX_NODES}
 
-  for ((i=1; i<=${NUM_MIGS}; i++)); do
+  for ((i=1; i<=NUM_MIGS; i++)); do
     local group_name="${NODE_INSTANCE_PREFIX}-group-$i"
     if [[ $i == ${NUM_MIGS} ]]; then
       # TODO: We don't add a suffix for the last group to keep backward compatibility when there's only one MIG.
@@ -3318,10 +3318,10 @@ function create-cluster-autoscaler-mig-config() {
       group_name="${NODE_INSTANCE_PREFIX}-group"
     fi
 
-    this_mig_min=$((${left_min}/(${NUM_MIGS}-${i}+1)))
-    this_mig_max=$((${left_max}/(${NUM_MIGS}-${i}+1)))
-    left_min=$((left_min-$this_mig_min))
-    left_max=$((left_max-$this_mig_max))
+    this_mig_min=$((left_min / (NUM_MIGS - i + 1)))
+    this_mig_max=$((left_max / (NUM_MIGS - i + 1)))
+    left_min=$((left_min - this_mig_min))
+    left_max=$((left_max - this_mig_max))
 
     local mig_url="https://www.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instanceGroups/${group_name}"
     AUTOSCALER_MIG_CONFIG="${AUTOSCALER_MIG_CONFIG} --nodes=${this_mig_min}:${this_mig_max}:${mig_url}"
@@ -3374,7 +3374,7 @@ function check-cluster() {
           ${secure} \
           --max-time 5 --fail \
           "https://${KUBE_MASTER_IP}/api/v1/pods?limit=100" > "${curl_out}" 2>&1; do
-      local elapsed=$(($(date +%s) - ${start_time}))
+      local elapsed=$(($(date +%s) - start_time))
       if [[ ${elapsed} -gt ${KUBE_CLUSTER_INITIALIZATION_TIMEOUT} ]]; then
           echo -e "${color_red}Cluster failed to initialize within ${KUBE_CLUSTER_INITIALIZATION_TIMEOUT} seconds.${color_norm}" >&2
           echo "Last output from querying API server follows:" >&2
@@ -3928,7 +3928,7 @@ function test-setup() {
   # As there is no simple way to wait longer for this operation we need to manually
   # wait some additional time (20 minutes altogether).
   while ! gcloud compute firewall-rules describe --project "${NETWORK_PROJECT}" "${NODE_TAG}-http-alt" 2> /dev/null; do
-    if [[ $(($start + 1200)) -lt `date +%s` ]]; then
+    if [[ $((start + 1200)) -lt `date +%s` ]]; then
       echo -e "${color_red}Failed to create firewall ${NODE_TAG}-http-alt in ${NETWORK_PROJECT}" >&2
       exit 1
     fi
@@ -3947,7 +3947,7 @@ function test-setup() {
   # As there is no simple way to wait longer for this operation we need to manually
   # wait some additional time (20 minutes altogether).
   while ! gcloud compute firewall-rules describe --project "${NETWORK_PROJECT}" "${NODE_TAG}-nodeports" 2> /dev/null; do
-    if [[ $(($start + 1200)) -lt `date +%s` ]]; then
+    if [[ $((start + 1200)) -lt `date +%s` ]]; then
       echo -e "${color_red}Failed to create firewall ${NODE_TAG}-nodeports in ${PROJECT}" >&2
       exit 1
     fi
