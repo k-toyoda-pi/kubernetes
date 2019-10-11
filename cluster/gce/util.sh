@@ -117,7 +117,7 @@ fi
 NODE_INSTANCE_PREFIX=${NODE_INSTANCE_PREFIX:-"${INSTANCE_PREFIX}-minion"}
 WINDOWS_NODE_INSTANCE_PREFIX=${WINDOWS_NODE_INSTANCE_PREFIX:-"${INSTANCE_PREFIX}-windows-node"}
 
-NODE_TAGS="${NODE_TAG}"
+NODE_TAGS="${NODE_TAG:-}"
 
 ALLOCATE_NODE_CIDRS=true
 PREEXISTING_NETWORK=false
@@ -1690,8 +1690,8 @@ function generate-certs {
     cd "${CERT_DIR}"
     ./easyrsa init-pki
     # this puts the cert into pki/ca.crt and the key into pki/private/ca.key
-    ./easyrsa --batch "--req-cn=${PRIMARY_CN}@$(date +%s)" build-ca nopass
-    ./easyrsa --subject-alt-name="${SANS}" build-server-full "${MASTER_NAME}" nopass
+    ./easyrsa --batch "--req-cn=${PRIMARY_CN:?}@$(date +%s)" build-ca nopass
+    ./easyrsa --subject-alt-name="${SANS:?}" build-server-full "${MASTER_NAME}" nopass
     ./easyrsa build-client-full kube-apiserver nopass
 
     kube::util::ensure-cfssl "${KUBE_TEMP}/cfssl"
