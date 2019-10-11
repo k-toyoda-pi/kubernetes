@@ -1844,12 +1844,12 @@ function generate-konnectivity-server-certs {
     echo '{"CN":"koonectivity-server","hosts":[""],"key":{"algo":"rsa","size":2048}}' | "${CFSSL_BIN}" gencert -ca=pki/ca.crt -ca-key=pki/private/ca.key -config=ca-config.json - | "${CFSSLJSON_BIN}" -bare konnectivity-agent
     rm -f "konnectivity-agent.csr"
 
-    echo `ls ${KONNECTIVITY_SERVER_CERT_DIR}/pki/`
-    echo `ls ${KONNECTIVITY_SERVER_CERT_DIR}/pki/private/`
-    echo `ls ${KONNECTIVITY_SERVER_CERT_DIR}/pki/issued/`
-    echo `ls ${KONNECTIVITY_AGENT_CERT_DIR}/pki/`
-    echo `ls ${KONNECTIVITY_AGENT_CERT_DIR}/pki/private/`
-    echo `ls ${KONNECTIVITY_AGENT_CERT_DIR}/pki/issued/`
+    echo $(ls ${KONNECTIVITY_SERVER_CERT_DIR}/pki/)
+    echo $(ls ${KONNECTIVITY_SERVER_CERT_DIR}/pki/private/)
+    echo $(ls ${KONNECTIVITY_SERVER_CERT_DIR}/pki/issued/)
+    echo $(ls ${KONNECTIVITY_AGENT_CERT_DIR}/pki/)
+    echo $(ls ${KONNECTIVITY_AGENT_CERT_DIR}/pki/private/)
+    echo $(ls ${KONNECTIVITY_AGENT_CERT_DIR}/pki/issued/)
     echo "completed main certificate section") &>${cert_create_debug_output} || true
 
   local output_file_missing=0
@@ -1889,7 +1889,7 @@ function generate-konnectivity-server-certs {
 # $2 env key to use
 function get-env-val() {
   local match
-  match=`(echo "${1}" | grep -E "^${2}:") || echo ""`
+  match=$((echo "${1}" | grep -E "^${2}:") || echo "")
   if [[ -z ${match} ]]; then
     echo ""
   fi
@@ -1941,7 +1941,7 @@ function parse-master-env() {
 #   KUBE_PROMPT_FOR_UPDATE
 function update-or-verify-gcloud() {
   local sudo_prefix=""
-  if [ ! -w $(dirname `which gcloud`) ]; then
+  if [ ! -w $(dirname $(which gcloud)) ]; then
     sudo_prefix="sudo"
   fi
   # update and install components as needed
@@ -3918,7 +3918,7 @@ function test-setup() {
   # Open up port 80 & 8080 so common containers on minions can be reached
   # TODO(roberthbailey): Remove this once we are no longer relying on hostPorts.
   local start
-  start=`date +%s`
+  start=$(date +%s)
   gcloud compute firewall-rules create \
     --project "${NETWORK_PROJECT}" \
     --target-tags "${NODE_TAG}" \
@@ -3928,7 +3928,7 @@ function test-setup() {
   # As there is no simple way to wait longer for this operation we need to manually
   # wait some additional time (20 minutes altogether).
   while ! gcloud compute firewall-rules describe --project "${NETWORK_PROJECT}" "${NODE_TAG}-http-alt" 2> /dev/null; do
-    if [[ $((start + 1200)) -lt `date +%s` ]]; then
+    if [[ $((start + 1200)) -lt $(date +%s) ]]; then
       echo -e "${color_red}Failed to create firewall ${NODE_TAG}-http-alt in ${NETWORK_PROJECT}" >&2
       exit 1
     fi
@@ -3937,7 +3937,7 @@ function test-setup() {
 
   # Open up the NodePort range
   # TODO(justinsb): Move to main setup, if we decide whether we want to do this by default.
-  start=`date +%s`
+  start=$(date +%s)
   gcloud compute firewall-rules create \
     --project "${NETWORK_PROJECT}" \
     --target-tags "${NODE_TAG}" \
@@ -3947,7 +3947,7 @@ function test-setup() {
   # As there is no simple way to wait longer for this operation we need to manually
   # wait some additional time (20 minutes altogether).
   while ! gcloud compute firewall-rules describe --project "${NETWORK_PROJECT}" "${NODE_TAG}-nodeports" 2> /dev/null; do
-    if [[ $((start + 1200)) -lt `date +%s` ]]; then
+    if [[ $((start + 1200)) -lt $(date +%s) ]]; then
       echo -e "${color_red}Failed to create firewall ${NODE_TAG}-nodeports in ${PROJECT}" >&2
       exit 1
     fi
