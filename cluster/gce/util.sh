@@ -42,7 +42,7 @@ else
 fi
 
 if [[ ${NODE_LOCAL_SSDS:-} -ge 1 ]] && [[ ! -z ${NODE_LOCAL_SSDS_EXT:-} ]] ; then
-  echo -e "${color_red}Local SSD: Only one of NODE_LOCAL_SSDS and NODE_LOCAL_SSDS_EXT can be specified at once${color_norm}" >&2
+  echo -e "${color_red:-}Local SSD: Only one of NODE_LOCAL_SSDS and NODE_LOCAL_SSDS_EXT can be specified at once${color_norm:-}" >&2
   exit 2
 fi
 
@@ -2020,7 +2020,7 @@ function create-static-ip() {
       exit 2
     fi
     attempt=$(($attempt+1))
-    echo -e "${color_yellow}Attempt $attempt failed to create static ip $1. Retrying.${color_norm}" >&2
+    echo -e "${color_yellow:-}Attempt $attempt failed to create static ip $1. Retrying.${color_norm}" >&2
     sleep $(($attempt * 5))
   done
 }
@@ -3408,7 +3408,7 @@ function check-cluster() {
   fi
 
   echo
-  echo -e "${color_green}Kubernetes cluster is running.  The master is running at:"
+  echo -e "${color_green:-}Kubernetes cluster is running.  The master is running at:"
   echo
   echo -e "${color_yellow}  https://${KUBE_MASTER_IP}"
   echo
