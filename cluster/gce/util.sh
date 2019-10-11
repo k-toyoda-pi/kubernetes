@@ -432,7 +432,8 @@ function detect-nodes() {
   detect-node-names
   KUBE_NODE_IP_ADDRESSES=()
   for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
-    local node_ip=$(gcloud compute instances describe --project "${PROJECT}" --zone "${ZONE}" \
+    local node_ip
+    node_ip=$(gcloud compute instances describe --project "${PROJECT}" --zone "${ZONE}" \
       "${NODE_NAMES[$i]}" --format='value(networkInterfaces[0].accessConfigs[0].natIP)')
     if [[ -z "${node_ip-}" ]] ; then
       echo "Did not find ${NODE_NAMES[$i]}" >&2
@@ -741,7 +742,8 @@ function construct-common-kubelet-flags {
 # $1: if 'true', we're rendering flags for a master, else a node
 function construct-linux-kubelet-flags {
   local master="$1"
-  local flags="$(construct-common-kubelet-flags)"
+  local flags
+  flags="$(construct-common-kubelet-flags)"
   # Keep in sync with CONTAINERIZED_MOUNTER_HOME in configure-helper.sh
   flags+=" --experimental-mounter-path=/home/kubernetes/containerized_mounter/mounter"
   flags+=" --experimental-check-node-capabilities-before-mount=true"
@@ -787,7 +789,8 @@ function construct-linux-kubelet-flags {
     flags+=" --non-masquerade-cidr=${NON_MASQUERADE_CIDR}"
   fi
   flags+=" --volume-plugin-dir=${VOLUME_PLUGIN_DIR}"
-  local node_labels="$(build-linux-node-labels ${master})"
+  local node_labels
+  node_labels="$(build-linux-node-labels ${master})"
   if [[ -n "${node_labels:-}" ]]; then
     flags+=" --node-labels=${node_labels}"
   fi
@@ -810,12 +813,14 @@ function construct-linux-kubelet-flags {
 # binPath parameter, and single-quotes get parsed as characters instead of
 # string delimiters.
 function construct-windows-kubelet-flags {
-  local flags="$(construct-common-kubelet-flags)"
+  local flags
+  flags="$(construct-common-kubelet-flags)"
 
   # Note: NODE_KUBELET_TEST_ARGS is empty in typical kube-up runs.
   flags+=" ${NODE_KUBELET_TEST_ARGS:-}"
 
-  local node_labels="$(build-windows-node-labels)"
+  local node_labels
+  node_labels="$(build-windows-node-labels)"
   if [[ -n "${node_labels:-}" ]]; then
     flags+=" --node-labels=${node_labels}"
   fi
@@ -1482,7 +1487,8 @@ EOF
           # TODO(kubernetes/autoscaler#718): AUTOSCALER_ENV_VARS is a hotfix for cluster autoscaler,
           # which reads the kube-env to determine the shape of a node and was broken by #60020.
           # This should be removed as soon as a more reliable source of information is available!
-          local node_labels="$(build-linux-node-labels false)"
+          local node_labels
+          node_labels="$(build-linux-node-labels false)"
           local node_taints="${NODE_TAINTS:-}"
           local autoscaler_env_vars="node_labels=${node_labels};node_taints=${node_taints}"
           cat >>$file <<EOF
@@ -1882,7 +1888,8 @@ function generate-konnectivity-server-certs {
 # $1 master env (kube-env of master; result of calling get-master-env)
 # $2 env key to use
 function get-env-val() {
-  local match=`(echo "${1}" | grep -E "^${2}:") || echo ""`
+  local match
+  match=`(echo "${1}" | grep -E "^${2}:") || echo ""`
   if [[ -z ${match} ]]; then
     echo ""
   fi
@@ -1892,7 +1899,8 @@ function get-env-val() {
 # Load the master env by calling get-master-env, and extract important values
 function parse-master-env() {
   # Get required master env vars
-  local master_env=$(get-master-env)
+  local master_env
+  master_env=$(get-master-env)
   KUBE_PROXY_TOKEN=$(get-env-val "${master_env}" "KUBE_PROXY_TOKEN")
   NODE_PROBLEM_DETECTOR_TOKEN=$(get-env-val "${master_env}" "NODE_PROBLEM_DETECTOR_TOKEN")
   CA_CERT_BASE64=$(get-env-val "${master_env}" "CA_CERT")
@@ -1942,7 +1950,8 @@ function update-or-verify-gcloud() {
     ${sudo_prefix} gcloud ${gcloud_prompt:-} components install beta
     ${sudo_prefix} gcloud ${gcloud_prompt:-} components update
   else
-    local version=$(gcloud version --format=json)
+    local version
+    version=$(gcloud version --format=json)
     python -c'
 import json,sys
 from distutils import version
@@ -2130,6 +2139,7 @@ function create-node-template() {
   local template_name="$1"
   local metadata_values="$4"
   local os="$5"
+  local machine_type="$6"
 
   # First, ensure the template doesn't exist.
   # TODO(zmerlynn): To make this really robust, we need to parse the output and
@@ -2187,7 +2197,8 @@ function create-node-template() {
     address="no-address"
   fi
 
-  local network=$(make-gcloud-network-argument \
+  local network
+  network=$(make-gcloud-network-argument \
     "${NETWORK_PROJECT}" \
     "${REGION}" \
     "${NETWORK}" \
@@ -2216,7 +2227,7 @@ function create-node-template() {
     if ! ${gcloud} compute instance-templates create \
       "${template_name}" \
       --project "${PROJECT}" \
-      --machine-type "${NODE_SIZE}" \
+      --machine-type "${machine_type}" \
       --boot-disk-type "${NODE_DISK_TYPE}" \
       --boot-disk-size "${NODE_DISK_SIZE}" \
       ${node_image_flags} \
@@ -2335,7 +2346,8 @@ function check-existing() {
 }
 
 function check-network-mode() {
-  local mode="$(gcloud compute networks list --filter="name=('${NETWORK}')" --project ${NETWORK_PROJECT} --format='value(x_gcloud_subnet_mode)' || true)"
+  local mode
+  mode="$(gcloud compute networks list --filter="name=('${NETWORK}')" --project ${NETWORK_PROJECT} --format='value(x_gcloud_subnet_mode)' || true)"
   # The deprecated field uses lower case. Convert to upper case for consistency.
   echo "$(echo $mode | tr [a-z] [A-Z])"
 }
@@ -2427,7 +2439,8 @@ function create-subnetworks() {
 
   # Look for the alias subnet, it must exist and have a secondary
   # range configured.
-  local subnet=$(gcloud compute networks subnets describe \
+  local subnet
+  subnet=$(gcloud compute networks subnets describe \
     --project "${NETWORK_PROJECT}" \
     --region ${REGION} \
     ${IP_ALIAS_SUBNETWORK} 2>/dev/null)
@@ -2771,7 +2784,8 @@ function add-replica-to-etcd() {
 #
 # NOTE: Must be in sync with get-replica-name-regexp
 function set-existing-master() {
-  local existing_master=$(gcloud compute instances list \
+  local existing_master
+  existing_master=$(gcloud compute instances list \
     --project "${PROJECT}" \
     --filter "name ~ '$(get-replica-name-regexp)'" \
     --format "value(name,zone)" | head -n1)
@@ -2803,7 +2817,8 @@ function replicate-master() {
     --type "${MASTER_DISK_TYPE}" \
     --size "${MASTER_DISK_SIZE}"
 
-  local existing_master_replicas="$(get-all-replica-names)"
+  local existing_master_replicas
+  existing_master_replicas="$(get-all-replica-names)"
   replicate-master-instance "${EXISTING_MASTER_ZONE}" "${EXISTING_MASTER_NAME}" "${existing_master_replicas}"
 
   # Add new replica to the load balancer.
@@ -2827,7 +2842,8 @@ function attach-external-ip() {
   local NAME=${1}
   local ZONE=${2}
   local IP_ADDR=${3:-}
-  local ACCESS_CONFIG_NAME=$(gcloud compute instances describe "${NAME}" \
+  local ACCESS_CONFIG_NAME
+  ACCESS_CONFIG_NAME=$(gcloud compute instances describe "${NAME}" \
     --project "${PROJECT}" --zone "${ZONE}" \
     --format="value(networkInterfaces[0].accessConfigs[0].name)")
   gcloud compute instances delete-access-config "${NAME}" \
@@ -2861,8 +2877,10 @@ function create-loadbalancer() {
     return
   fi
 
-  local EXISTING_MASTER_NAME="$(get-all-replica-names)"
-  local EXISTING_MASTER_ZONE=$(gcloud compute instances list "${EXISTING_MASTER_NAME}" \
+  local EXISTING_MASTER_NAME
+  EXISTING_MASTER_NAME="$(get-all-replica-names)"
+  local EXISTING_MASTER_ZONE
+  EXISTING_MASTER_ZONE=$(gcloud compute instances list "${EXISTING_MASTER_NAME}" \
     --project "${PROJECT}" --format="value(zone)")
 
   echo "Creating load balancer in front of an already existing master in ${EXISTING_MASTER_ZONE}"
@@ -2905,7 +2923,8 @@ function attach-internal-master-ip() {
   local zone="${2}"
   local ip="${3}"
 
-  local aliases=$(gcloud compute instances describe "${name}" --project "${PROJECT}" --zone "${zone}" --flatten='networkInterfaces[0].aliasIpRanges[]' --format='value[separator=':'](networkInterfaces[0].aliasIpRanges.subnetworkRangeName,networkInterfaces[0].aliasIpRanges.ipCidrRange)' | sed 's/^://' | paste -s -d';' -)
+  local aliases
+  aliases=$(gcloud compute instances describe "${name}" --project "${PROJECT}" --zone "${zone}" --flatten='networkInterfaces[0].aliasIpRanges[]' --format='value[separator=':'](networkInterfaces[0].aliasIpRanges.subnetworkRangeName,networkInterfaces[0].aliasIpRanges.ipCidrRange)' | sed 's/^://' | paste -s -d';' -)
   aliases="${aliases:+${aliases};}${ip}/32"
   echo "Setting ${name}'s aliases to '${aliases}' (added ${ip})"
   # Attach ${ip} to ${name}
@@ -2924,7 +2943,8 @@ function detach-internal-master-ip() {
   local zone="${2}"
   local ip="${3}"
 
-  local aliases=$(gcloud compute instances describe "${name}" --project "${PROJECT}" --zone "${zone}" --flatten='networkInterfaces[0].aliasIpRanges[]' --format='value[separator=':'](networkInterfaces[0].aliasIpRanges.subnetworkRangeName,networkInterfaces[0].aliasIpRanges.ipCidrRange)' | sed 's/^://' | grep -v "${ip}" | paste -s -d';' -)
+  local aliases
+  aliases=$(gcloud compute instances describe "${name}" --project "${PROJECT}" --zone "${zone}" --flatten='networkInterfaces[0].aliasIpRanges[]' --format='value[separator=':'](networkInterfaces[0].aliasIpRanges.subnetworkRangeName,networkInterfaces[0].aliasIpRanges.ipCidrRange)' | sed 's/^://' | grep -v "${ip}" | paste -s -d';' -)
   echo "Setting ${name}'s aliases to '${aliases}' (removed ${ip})"
   # Detach ${MASTER_NAME}-internal-ip from ${name}
   gcloud compute instances network-interfaces update "${name}" --project "${PROJECT}" --zone "${zone}" --aliases="${aliases}"
@@ -2945,8 +2965,10 @@ function create-internal-loadbalancer() {
     return
   fi
 
-  local EXISTING_MASTER_NAME="$(get-all-replica-names)"
-  local EXISTING_MASTER_ZONE=$(gcloud compute instances list "${EXISTING_MASTER_NAME}" \
+  local EXISTING_MASTER_NAME
+  EXISTING_MASTER_NAME="$(get-all-replica-names)"
+  local EXISTING_MASTER_ZONE
+  EXISTING_MASTER_ZONE=$(gcloud compute instances list "${EXISTING_MASTER_NAME}" \
     --project "${PROJECT}" --format="value(zone)")
 
   echo "Detaching ${KUBE_MASTER_INTERNAL_IP} from ${EXISTING_MASTER_NAME}/${EXISTING_MASTER_ZONE}"
@@ -3057,7 +3079,8 @@ function get-scope-flags() {
 function create-nodes-template() {
   echo "Creating nodes."
 
-  local scope_flags=$(get-scope-flags)
+  local scope_flags
+  scope_flags=$(get-scope-flags)
 
   write-linux-node-env
   write-windows-node-env
@@ -3068,6 +3091,10 @@ function create-nodes-template() {
   local windows_template_name="${WINDOWS_NODE_INSTANCE_PREFIX}-template"
   create-linux-node-instance-template $linux_template_name
   create-windows-node-instance-template $windows_template_name "${scope_flags[*]}"
+  if [[ -n "${ADDITIONAL_MACHINE_TYPE:-}" ]]; then
+    local linux_extra_template_name="${NODE_INSTANCE_PREFIX}-extra-template"
+    create-linux-node-instance-template $linux_extra_template_name "${ADDITIONAL_MACHINE_TYPE}"
+  fi
 }
 
 # Assumes:
@@ -3096,13 +3123,38 @@ function set_num_migs() {
 # - ZONE
 function create-linux-nodes() {
   local template_name="${NODE_INSTANCE_PREFIX}-template"
+  local extra_template_name="${NODE_INSTANCE_PREFIX}-extra-template"
 
-  if [[ -z "${HEAPSTER_MACHINE_TYPE:-}" ]]; then
-    local -r nodes="${NUM_NODES}"
-  else
+  local nodes="${NUM_NODES}"
+  if [[ ! -z "${HEAPSTER_MACHINE_TYPE:-}" ]]; then
     echo "Creating a special node for heapster with machine-type ${HEAPSTER_MACHINE_TYPE}"
     create-heapster-node
-    local -r nodes=$(( NUM_NODES - 1 ))
+    nodes=$(( nodes - 1 ))
+  fi
+
+  if [[ -n "${ADDITIONAL_MACHINE_TYPE:-}" && "${NUM_ADDITIONAL_NODES:-}" -gt 0 ]]; then
+    local num_additional="${NUM_ADDITIONAL_NODES}"
+    if [[ "${NUM_ADDITIONAL_NODES:-}" -gt "${nodes}" ]]; then
+      echo "Capping NUM_ADDITIONAL_NODES to ${nodes}"
+      num_additional="${nodes}"
+    fi
+    if [[ "${num_additional:-}" -gt 0 ]]; then
+      echo "Creating ${num_additional} special nodes with machine-type ${ADDITIONAL_MACHINE_TYPE}"
+      local extra_group_name="${NODE_INSTANCE_PREFIX}-extra"
+      gcloud compute instance-groups managed \
+          create "${extra_group_name}" \
+          --project "${PROJECT}" \
+          --zone "${ZONE}" \
+          --base-instance-name "${extra_group_name}" \
+          --size "${num_additional}" \
+          --template "${extra_template_name}" || true;
+      gcloud compute instance-groups managed wait-until-stable \
+          "${extra_group_name}" \
+          --zone "${ZONE}" \
+          --project "${PROJECT}" \
+          --timeout "${MIG_WAIT_UNTIL_STABLE_TIMEOUT}" || true
+      nodes=$(( nodes - $num_additional ))
+    fi
   fi
 
   local instances_left=${nodes}
@@ -3195,7 +3247,8 @@ function create-windows-nodes() {
 function create-heapster-node() {
   local gcloud="gcloud"
 
-  local network=$(make-gcloud-network-argument \
+  local network
+  network=$(make-gcloud-network-argument \
       "${NETWORK_PROJECT}" \
       "${REGION}" \
       "${NETWORK}" \
@@ -3311,8 +3364,10 @@ function check-cluster() {
     fi
   fi
 
-  local start_time=$(date +%s)
-  local curl_out=$(mktemp)
+  local start_time
+  start_time=$(date +%s)
+  local curl_out
+  curl_out=$(mktemp)
   kube::util::trap_add "rm -f ${curl_out}" EXIT
   until curl --cacert "${CERT_DIR}/pki/ca.crt" \
           -H "Authorization: Bearer ${KUBE_BEARER_TOKEN}" \
@@ -3410,17 +3465,20 @@ function kube-down() {
     # Get the name of the managed instance group template before we delete the
     # managed instance group. (The name of the managed instance group template may
     # change during a cluster upgrade.)
-    local templates=$(get-template "${PROJECT}")
+    local templates
+    templates=$(get-template "${PROJECT}")
 
     local all_instance_groups=(${INSTANCE_GROUPS[@]:-} ${WINDOWS_INSTANCE_GROUPS[@]:-})
     for group in ${all_instance_groups[@]:-}; do
-      if gcloud compute instance-groups managed describe "${group}" --project "${PROJECT}" --zone "${ZONE}" &>/dev/null; then
-        gcloud compute instance-groups managed delete \
-          --project "${PROJECT}" \
-          --quiet \
-          --zone "${ZONE}" \
-          "${group}" &
-      fi
+      {
+        if gcloud compute instance-groups managed describe "${group}" --project "${PROJECT}" --zone "${ZONE}" &>/dev/null; then
+          gcloud compute instance-groups managed delete \
+            --project "${PROJECT}" \
+            --quiet \
+            --zone "${ZONE}" \
+            "${group}"
+        fi
+      } &
     done
 
     # Wait for last batch of jobs
@@ -3429,13 +3487,20 @@ function kube-down() {
     }
 
     for template in ${templates[@]:-}; do
-      if gcloud compute instance-templates describe --project "${PROJECT}" "${template}" &>/dev/null; then
-        gcloud compute instance-templates delete \
-          --project "${PROJECT}" \
-          --quiet \
-          "${template}"
-      fi
+      {
+        if gcloud compute instance-templates describe --project "${PROJECT}" "${template}" &>/dev/null; then
+          gcloud compute instance-templates delete \
+            --project "${PROJECT}" \
+            --quiet \
+            "${template}"
+        fi
+      } &
     done
+
+    # Wait for last batch of jobs
+    kube::util::wait-for-jobs || {
+      echo -e "Failed to delete instance template(s)." >&2
+    }
 
     # Delete the special heapster node (if it exists).
     if [[ -n "${HEAPSTER_MACHINE_TYPE:-}" ]]; then
@@ -3494,7 +3559,8 @@ function kube-down() {
   fi
 
   # Check if this are any remaining master replicas.
-  local REMAINING_MASTER_COUNT=$(gcloud compute instances list \
+  local REMAINING_MASTER_COUNT
+  REMAINING_MASTER_COUNT=$(gcloud compute instances list \
     --project "${PROJECT}" \
     --filter="name ~ '$(get-replica-name-regexp)'" \
     --format "value(zone)" | wc -l)
@@ -3503,8 +3569,10 @@ function kube-down() {
   if [[ "${REMAINING_MASTER_COUNT}" -eq 1 ]]; then
     if gcloud compute forwarding-rules describe "${MASTER_NAME}" --region "${REGION}" --project "${PROJECT}" &>/dev/null; then
       detect-master
-      local REMAINING_REPLICA_NAME="$(get-all-replica-names)"
-      local REMAINING_REPLICA_ZONE=$(gcloud compute instances list "${REMAINING_REPLICA_NAME}" \
+      local REMAINING_REPLICA_NAME
+      REMAINING_REPLICA_NAME="$(get-all-replica-names)"
+      local REMAINING_REPLICA_ZONE
+      REMAINING_REPLICA_ZONE=$(gcloud compute instances list "${REMAINING_REPLICA_NAME}" \
         --project "${PROJECT}" --format="value(zone)")
       gcloud compute forwarding-rules delete \
         --project "${PROJECT}" \
@@ -3673,7 +3741,8 @@ function get-all-replica-names() {
 #   MASTER_NAME
 function get-master-replicas-count() {
   detect-project
-  local num_masters=$(gcloud compute instances list \
+  local num_masters
+  num_masters=$(gcloud compute instances list \
     --project "${PROJECT}" \
     --filter="name ~ '$(get-replica-name-regexp)'" \
     --format "value(zone)" | wc -l)
@@ -3697,7 +3766,8 @@ function get-replica-name-regexp() {
 # Sets:
 #   REPLICA_NAME
 function set-replica-name() {
-  local instances=$(gcloud compute instances list \
+  local instances
+  instances=$(gcloud compute instances list \
     --project "${PROJECT}" \
     --filter="name ~ '$(get-replica-name-regexp)'" \
     --format "value(name)")
@@ -3717,7 +3787,7 @@ function set-replica-name() {
 #
 # $1: project
 function get-template() {
-  local linux_filter="${NODE_INSTANCE_PREFIX}-template(-(${KUBE_RELEASE_VERSION_DASHED_REGEX}|${KUBE_CI_VERSION_DASHED_REGEX}))?"
+  local linux_filter="${NODE_INSTANCE_PREFIX}-(extra-)?template(-(${KUBE_RELEASE_VERSION_DASHED_REGEX}|${KUBE_CI_VERSION_DASHED_REGEX}))?"
   local windows_filter="${WINDOWS_NODE_INSTANCE_PREFIX}-template(-(${KUBE_RELEASE_VERSION_DASHED_REGEX}|${KUBE_CI_VERSION_DASHED_REGEX}))?"
 
   gcloud compute instance-templates list \
@@ -3847,7 +3917,8 @@ function test-setup() {
 
   # Open up port 80 & 8080 so common containers on minions can be reached
   # TODO(roberthbailey): Remove this once we are no longer relying on hostPorts.
-  local start=`date +%s`
+  local start
+  start=`date +%s`
   gcloud compute firewall-rules create \
     --project "${NETWORK_PROJECT}" \
     --target-tags "${NODE_TAG}" \
