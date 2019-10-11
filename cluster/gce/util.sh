@@ -41,7 +41,7 @@ else
   exit 1
 fi
 
-if [[ ${NODE_LOCAL_SSDS:-} -ge 1 ]] && [[ ! -z ${NODE_LOCAL_SSDS_EXT:-} ]] ; then
+if [[ ${NODE_LOCAL_SSDS:-} -ge 1 ]] && [[ -n ${NODE_LOCAL_SSDS_EXT:-} ]] ; then
   echo -e "${color_red:-}Local SSD: Only one of NODE_LOCAL_SSDS and NODE_LOCAL_SSDS_EXT can be specified at once${color_norm:-}" >&2
   exit 2
 fi
@@ -485,7 +485,7 @@ function detect-master() {
 }
 
 function load-or-gen-kube-bearertoken() {
-  if [[ ! -z "${KUBE_CONTEXT:-}" ]]; then
+  if [[ -n "${KUBE_CONTEXT:-}" ]]; then
     get-kubeconfig-bearertoken
   fi
   if [[ -z "${KUBE_BEARER_TOKEN:-}" ]]; then
@@ -2158,7 +2158,7 @@ function create-node-template() {
   local accelerator_args=""
   # VMs with Accelerators cannot be live migrated.
   # More details here - https://cloud.google.com/compute/docs/gpus/add-gpus#create-new-gpu-instance
-  if [[ ! -z "${NODE_ACCELERATORS}" ]]; then
+  if [[ -n "${NODE_ACCELERATORS}" ]]; then
     accelerator_args="--maintenance-policy TERMINATE --restart-on-failure --accelerator ${NODE_ACCELERATORS}"
     gcloud="gcloud beta"
   fi
@@ -2170,7 +2170,7 @@ function create-node-template() {
 
   local local_ssds=""
   local_ssd_ext_count=0
-  if [[ ! -z ${NODE_LOCAL_SSDS_EXT:-} ]]; then
+  if [[ -n ${NODE_LOCAL_SSDS_EXT:-} ]]; then
     IFS=";" read -r -a ssdgroups <<< "${NODE_LOCAL_SSDS_EXT:-}"
     for ssdgroup in "${ssdgroups[@]}"
     do
@@ -2182,7 +2182,7 @@ function create-node-template() {
     done
   fi
 
-  if [[ ! -z ${NODE_LOCAL_SSDS+x} ]]; then
+  if [[ -n ${NODE_LOCAL_SSDS+x} ]]; then
     # The NODE_LOCAL_SSDS check below fixes issue #49171
     # Some versions of seq will count down from 1 if "seq 0" is specified
     if [[ ${NODE_LOCAL_SSDS} -ge 1 ]]; then
@@ -3126,7 +3126,7 @@ function create-linux-nodes() {
   local extra_template_name="${NODE_INSTANCE_PREFIX}-extra-template"
 
   local nodes="${NUM_NODES}"
-  if [[ ! -z "${HEAPSTER_MACHINE_TYPE:-}" ]]; then
+  if [[ -n "${HEAPSTER_MACHINE_TYPE:-}" ]]; then
     echo "Creating a special node for heapster with machine-type ${HEAPSTER_MACHINE_TYPE}"
     create-heapster-node
     nodes=$(( nodes - 1 ))
