@@ -51,10 +51,10 @@ if [[ "${MASTER_OS_DISTRIBUTION}" == "gci" ]]; then
     if [[ "${GCI_VERSION}" == "cos"* ]]; then
         DEFAULT_GCI_PROJECT=cos-cloud
     fi
-    MASTER_IMAGE_PROJECT=${KUBE_GCE_MASTER_PROJECT:-${DEFAULT_GCI_PROJECT}}
+    export MASTER_IMAGE_PROJECT=${KUBE_GCE_MASTER_PROJECT:-${DEFAULT_GCI_PROJECT}}
     # If the master image is not set, we use the latest GCI image.
     # Otherwise, we respect whatever is set by the user.
-    MASTER_IMAGE=${KUBE_GCE_MASTER_IMAGE:-${GCI_VERSION}}
+    export MASTER_IMAGE=${KUBE_GCE_MASTER_IMAGE:-${GCI_VERSION}}
 fi
 
 # Sets node image based on the specified os distro. Currently this function only
@@ -88,9 +88,9 @@ function set-linux-node-image() {
 function set-windows-node-image() {
   WINDOWS_NODE_IMAGE_PROJECT="windows-cloud"
   if [[ "${WINDOWS_NODE_OS_DISTRIBUTION}" == "win2019" ]]; then
-    WINDOWS_NODE_IMAGE_FAMILY="windows-2019-core-for-containers"
+    export WINDOWS_NODE_IMAGE_FAMILY="windows-2019-core-for-containers"
   elif [[ "${WINDOWS_NODE_OS_DISTRIBUTION}" == "win1809" ]]; then
-    WINDOWS_NODE_IMAGE_FAMILY="windows-1809-core-for-containers"
+    export WINDOWS_NODE_IMAGE_FAMILY="windows-1809-core-for-containers"
   else
     echo "Unknown WINDOWS_NODE_OS_DISTRIBUTION ${WINDOWS_NODE_OS_DISTRIBUTION}" >&2
     exit 1
